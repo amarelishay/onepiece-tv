@@ -1100,6 +1100,115 @@
       border-radius: 2px;
     }
 
+    /* ── SEARCH BAR ──────────────────────────── */
+    .search-wrap {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      background: rgba(255,255,255,0.05);
+      border: 1px solid rgba(255,255,255,0.1);
+      border-radius: 100px;
+      padding: 8px 20px;
+      transition: border-color var(--tr), background var(--tr);
+      flex: 1;
+      max-width: 440px;
+      margin: 0 24px;
+    }
+
+    .search-wrap:focus-within {
+      border-color: rgba(200,148,14,0.55);
+      background: rgba(200,148,14,0.05);
+    }
+
+    .search-icon { font-size: 16px; opacity: 0.45; flex-shrink: 0; }
+
+    #ep-search {
+      background: transparent;
+      border: none;
+      outline: none;
+      color: var(--text);
+      font-size: var(--fs-ui);
+      font-family: var(--fu);
+      width: 100%;
+      direction: rtl;
+    }
+
+    #ep-search::placeholder { color: var(--text3); }
+
+    .search-clear {
+      background: none;
+      border: none;
+      color: var(--text2);
+      cursor: pointer;
+      font-size: 15px;
+      opacity: 0;
+      padding: 0;
+      transition: opacity var(--tr);
+      flex-shrink: 0;
+      line-height: 1;
+    }
+
+    .search-wrap.has-text .search-clear { opacity: 1; }
+
+    .no-results {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      gap: 14px;
+      padding: 80px 0;
+      color: var(--text2);
+      font-size: var(--fs-ui);
+    }
+
+    .no-results .nr-icon { font-size: 52px; opacity: 0.35; }
+
+    /* ── NUMBER DIAL OVERLAY ──────────────────── */
+    #dial-overlay {
+      position: fixed;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      z-index: 60;
+      background: rgba(6,8,14,0.96);
+      border: 2px solid rgba(200,148,14,0.55);
+      border-radius: 20px;
+      padding: 28px 52px 24px;
+      text-align: center;
+      display: none;
+      flex-direction: column;
+      align-items: center;
+      gap: 8px;
+      min-width: 280px;
+    }
+
+    #dial-overlay.on { display: flex; }
+
+    .dial-label {
+      font-size: var(--fs-sm);
+      color: var(--text2);
+      letter-spacing: 2px;
+    }
+
+    #dial-number {
+      font-family: var(--ft);
+      font-size: 74px;
+      font-weight: 900;
+      color: var(--gold2);
+      letter-spacing: 6px;
+      line-height: 1;
+      min-height: 84px;
+      text-shadow: 0 0 30px rgba(240,192,48,0.4);
+    }
+
+    #dial-hint {
+      font-size: var(--fs-sm);
+      color: var(--text2);
+      min-height: 18px;
+      max-width: 240px;
+      line-height: 1.4;
+    }
+
     /* ── CARD ENTRANCE ────────────────────────── */
     @keyframes fadeInUp {
       from { opacity: 0; transform: translateY(12px) }
@@ -1129,6 +1238,11 @@
           <div class="ls">אנימה ישראל • 1000 פרקים</div>
         </div>
       </div>
+      <div class="search-wrap" id="search-wrap">
+        <span class="search-icon">🔍</span>
+        <input type="text" id="ep-search" placeholder="חיפוש לפי שם או מספר פרק..." autocomplete="off">
+        <button class="search-clear" id="search-clear" tabindex="-1">✕</button>
+      </div>
       <button id="btn-resume" tabindex="0">
         <span class="ri">▶</span>
         <span class="rt">
@@ -1145,6 +1259,13 @@
     <div id="ep-wrap">
       <div id="ep-content"></div>
     </div>
+  </div>
+
+  <!-- ═══ DIAL OVERLAY ═══ -->
+  <div id="dial-overlay">
+    <div class="dial-label">עבור לפרק</div>
+    <div id="dial-number"></div>
+    <div id="dial-hint"></div>
   </div>
 
   <!-- ═══ PLAYER SCREEN ═══ -->
@@ -1380,6 +1501,8 @@
       seeking: false,
       saveIv: null,
       _lastSec: -1,
+      navHistory: [],   // [{saga}] — for back-button navigation
+      search: '',       // current search query
     };
 
     /* ══════════════════════════════════════════════
@@ -1393,6 +1516,8 @@
     const PTOP = $('player-top'), PHUD = $('player-hud');
     const TOPTTL = $('top-title'), HUDT = $('hud-title'), HUDN = $('hud-num');
     const PROGWRAP = $('prog-wrap'), PROGFILL = $('prog-fill'), PROGBUF = $('prog-buf'), PROGTHUMB = $('prog-thumb'), PROGTIP = $('prog-tip');
+    const SEARCHINPUT = $('ep-search'), SEARCHWRAP = $('search-wrap'), SEARCHCLEAR = $('search-clear');
+    const DIALOVERLAY = $('dial-overlay'), DIALNUMBER = $('dial-number'), DIALHINT = $('dial-hint');
     const TCUR = $('time-cur'), TDUR = $('time-dur');
     const BPLAY = $('btn-play'), BRW = $('btn-rw'), BFW = $('btn-fw');
     const BSPD = $('btn-spd'), BVOL = $('vol-slider'), VICO = $('vol-icon');
@@ -1454,61 +1579,87 @@
       SNAV.innerHTML = ''; SNAV.appendChild(f);
     }
 
+    function buildCard(ep, watched) {
+      const hasUrl = !!EP[ep.n];
+      const pos = getPos(ep.n);
+      const hasR = pos.t > 30 && pos.dur > 0;
+      const pct = hasR ? Math.min(100, (pos.t / pos.dur) * 100) : 0;
+      const c = document.createElement('div');
+      c.className = 'epc focusable'
+        + (watched.includes(ep.n) ? ' wt' : '')
+        + (hasUrl ? '' : ' ns')
+        + (hasR ? ' has-resume' : '');
+      c.dataset.type = 'episode'; c.dataset.epn = ep.n;
+      c.setAttribute('role', 'listitem'); c.tabIndex = 0;
+      const epost = document.createElement('div'); epost.className = 'ep-post';
+      const epnsp = document.createElement('span'); epnsp.className = 'ep-n'; epnsp.textContent = ep.n;
+      const rbar = document.createElement('div'); rbar.className = 'ep-resume-bar';
+      const rfill = document.createElement('div'); rfill.className = 'ep-resume-fill'; rfill.style.width = pct + '%';
+      rbar.appendChild(rfill); epost.append(epnsp, rbar);
+      const einfo = document.createElement('div'); einfo.className = 'ep-info';
+      const ewanted = document.createElement('span'); ewanted.className = 'ep-w'; ewanted.textContent = 'WANTED';
+      const etitle = document.createElement('div'); etitle.className = 'ep-t'; etitle.textContent = ep.nm;
+      const enuml = document.createElement('div'); enuml.className = 'ep-nl'; enuml.textContent = 'פרק ' + ep.n + (hasR ? ' · ' + fmt(pos.t) : '');
+      einfo.append(ewanted, etitle, enuml); c.append(epost, einfo);
+      return c;
+    }
+
     function renderEps() {
       const saga = DATA.sagas[ST.saga];
       const watched = getWatched();
       const frag = document.createDocumentFragment();
-
       saga.arcs.forEach(arc => {
-        const section = document.createElement('div');
-        section.className = 'arc-section';
-
-        // Arc header
-        const hdr = document.createElement('div');
-        hdr.className = 'arc-hdr';
+        const section = document.createElement('div'); section.className = 'arc-section';
+        const hdr = document.createElement('div'); hdr.className = 'arc-hdr';
         const aln1 = document.createElement('div'); aln1.className = 'arc-line';
         const ans = document.createElement('span'); ans.className = 'arc-name'; ans.textContent = arc.name;
         const acs = document.createElement('span'); acs.className = 'arc-count'; acs.textContent = arc.eps.length + ' פרקים';
         const aln2 = document.createElement('div'); aln2.className = 'arc-line r';
-        hdr.append(aln1, ans, acs, aln2);
-        section.appendChild(hdr);
-
-        // Grid
-        const grid = document.createElement('div');
-        grid.className = 'arc-grid';
-
-        arc.eps.forEach(ep => {
-          const hasUrl = !!EP[ep.n];
-          const pos = getPos(ep.n);
-          const hasR = pos.t > 30 && pos.dur > 0;
-          const pct = hasR ? Math.min(100, (pos.t / pos.dur) * 100) : 0;
-          const c = document.createElement('div');
-          c.className = 'epc focusable'
-            + (watched.includes(ep.n) ? ' wt' : '')
-            + (hasUrl ? '' : ' ns')
-            + (hasR ? ' has-resume' : '');
-          c.dataset.type = 'episode'; c.dataset.epn = ep.n;
-          c.setAttribute('role', 'listitem'); c.tabIndex = 0;
-          const epost = document.createElement('div'); epost.className = 'ep-post';
-          const epnsp = document.createElement('span'); epnsp.className = 'ep-n'; epnsp.textContent = ep.n;
-          const rbar = document.createElement('div'); rbar.className = 'ep-resume-bar';
-          const rfill = document.createElement('div'); rfill.className = 'ep-resume-fill'; rfill.style.width = pct + '%';
-          rbar.appendChild(rfill); epost.append(epnsp, rbar);
-          const einfo = document.createElement('div'); einfo.className = 'ep-info';
-          const ewanted = document.createElement('span'); ewanted.className = 'ep-w'; ewanted.textContent = 'WANTED';
-          const etitle = document.createElement('div'); etitle.className = 'ep-t'; etitle.textContent = ep.nm;
-          const enuml = document.createElement('div'); enuml.className = 'ep-nl'; enuml.textContent = 'פרק ' + ep.n + (hasR ? ' · ' + fmt(pos.t) : '');
-          einfo.append(ewanted, etitle, enuml); c.append(epost, einfo);
-          grid.appendChild(c);
-        });
-
-        section.appendChild(grid);
-        frag.appendChild(section);
+        hdr.append(aln1, ans, acs, aln2); section.appendChild(hdr);
+        const grid = document.createElement('div'); grid.className = 'arc-grid';
+        arc.eps.forEach(ep => grid.appendChild(buildCard(ep, watched)));
+        section.appendChild(grid); frag.appendChild(section);
       });
-
       EPCONT.innerHTML = ''; EPCONT.appendChild(frag);
       requestAnimationFrame(() => { const x = EPCONT.querySelector('.epc'); if (x) setFx(x); });
     }
+
+    function renderSearch(q) {
+      const ql = q.toLowerCase();
+      const watched = getWatched();
+      const matches = [];
+      for (const s of DATA.sagas)
+        for (const a of s.arcs)
+          for (const ep of a.eps)
+            if (String(ep.n).includes(q) || ep.nm.toLowerCase().includes(ql)) matches.push(ep);
+      const frag = document.createDocumentFragment();
+      if (!matches.length) {
+        const nr = document.createElement('div'); nr.className = 'no-results';
+        nr.innerHTML = '<div class="nr-icon">🔍</div><div>לא נמצאו תוצאות עבור &quot;' + q + '&quot;</div>';
+        frag.appendChild(nr);
+      } else {
+        const lbl = document.createElement('div');
+        lbl.style.cssText = 'padding:0 0 16px;color:var(--text2);font-size:var(--fs-sm)';
+        lbl.textContent = matches.length + ' תוצאות';
+        frag.appendChild(lbl);
+        const grid = document.createElement('div'); grid.className = 'arc-grid';
+        matches.forEach(ep => grid.appendChild(buildCard(ep, watched)));
+        frag.appendChild(grid);
+      }
+      EPCONT.innerHTML = ''; EPCONT.appendChild(frag);
+      requestAnimationFrame(() => { const x = EPCONT.querySelector('.epc'); if (x) setFx(x); });
+    }
+
+    function applySearch(q) {
+      ST.search = q;
+      SEARCHWRAP.classList.toggle('has-text', !!q);
+      q ? renderSearch(q) : renderEps();
+    }
+
+    function clearSearch() { SEARCHINPUT.value = ''; applySearch(''); }
+
+    SEARCHINPUT.addEventListener('input', () => applySearch(SEARCHINPUT.value.trim()));
+    SEARCHCLEAR.addEventListener('click', () => { clearSearch(); SEARCHINPUT.focus(); });
 
     /* ══════════════════════════════════════════════
        FOCUS & SPATIAL NAV
@@ -1542,9 +1693,56 @@
        EVENT DELEGATION
        ══════════════════════════════════════════════ */
     const DM = { ArrowRight: 'right', ArrowLeft: 'left', ArrowDown: 'down', ArrowUp: 'up' };
+    /* ── NUMBER DIAL ─────────────────────────── */
+    let _dialStr = '', _dialTimer = null;
+    function dialDigit(d) {
+      _dialStr += d;
+      DIALNUMBER.textContent = _dialStr;
+      const ep = findEp(+_dialStr);
+      DIALHINT.textContent = ep ? ep.nm : (+_dialStr > 1000 ? 'מספר לא חוקי' : '...');
+      DIALOVERLAY.classList.add('on');
+      clearTimeout(_dialTimer);
+      _dialTimer = setTimeout(() => {
+        const n = +_dialStr; _dialStr = '';
+        DIALOVERLAY.classList.remove('on');
+        const target = findEp(n);
+        if (target) { openEp(n); }
+        else {
+          DIALNUMBER.textContent = n; DIALHINT.textContent = 'פרק לא קיים';
+          DIALOVERLAY.classList.add('on');
+          setTimeout(() => DIALOVERLAY.classList.remove('on'), 1400);
+        }
+      }, 1500);
+    }
+
     document.addEventListener('keydown', e => {
       resetAct();
       if (PS.classList.contains('active')) { handlePKeys(e); return; }
+
+      // Back / GoBack keys
+      if (e.key === 'Backspace' || e.key === 'GoBack' || e.key === 'BrowserBack' || e.key === 'XF86Back') {
+        e.preventDefault();
+        // If dial is open — clear it
+        if (DIALOVERLAY.classList.contains('on')) {
+          clearTimeout(_dialTimer); _dialStr = ''; DIALOVERLAY.classList.remove('on'); return;
+        }
+        // If search is active — clear search
+        if (ST.search) { clearSearch(); return; }
+        // Navigate back in saga history
+        if (ST.navHistory.length > 0) {
+          const prev = ST.navHistory.pop();
+          ST.saga = prev.saga;
+          document.querySelectorAll('.saga-tab').forEach((t, j) => t.classList.toggle('ac', j === ST.saga));
+          renderEps();
+        }
+        return;
+      }
+
+      // Number dial — digits typed while not in search input
+      if (/^\d$/.test(e.key) && document.activeElement !== SEARCHINPUT && !e.ctrlKey && !e.altKey) {
+        e.preventDefault(); dialDigit(e.key); return;
+      }
+
       if (DM[e.key]) { e.preventDefault(); const n = nbr(ST.focused, DM[e.key]); if (n) setFx(n); return; }
       if (e.key === 'Enter' || e.key === ' ') { e.preventDefault(); if (ST.focused) activEl(ST.focused); }
     });
@@ -1568,8 +1766,10 @@
       else if (el === BR && BR._ep) openEp(BR._ep.n);
     }
     function selSaga(i) {
+      if (i !== ST.saga) ST.navHistory.push({ saga: ST.saga });
       ST.saga = i;
       document.querySelectorAll('.saga-tab').forEach((t, j) => t.classList.toggle('ac', j === i));
+      clearSearch();
       renderEps();
     }
 
@@ -1584,6 +1784,7 @@
       ST.ep = ep;
       markWatched(n); updResume();
       MS.classList.remove('active'); PS.classList.add('active');
+      clearTimeout(_dialTimer); _dialStr = ''; DIALOVERLAY.classList.remove('on');
       TOPTTL.textContent = 'פרק ' + ep.n + ' — ' + ep.nm;
       HUDT.textContent = ep.nm; HUDN.textContent = 'פרק ' + ep.n;
       VERR.classList.remove('on'); VLOAD.classList.add('on');
@@ -1758,7 +1959,7 @@
         return;
       }
       switch (e.key) {
-        case 'Backspace': case 'Escape': goBack(); return;
+        case 'Backspace': case 'Escape': case 'GoBack': case 'BrowserBack': case 'XF86Back': goBack(); return;
         case 'Enter': case ' ':
         case 'MediaPlayPause': case 'MediaPlay': case 'MediaPause':
           e.preventDefault();
