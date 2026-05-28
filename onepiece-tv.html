@@ -5,7 +5,10 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=1920,initial-scale=1.0">
   <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1">
-  <link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+Hebrew:wght@300;400;600&display=swap" rel="stylesheet">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="preload" as="style" href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+Hebrew:wght@300;400;600&display=swap" onload="this.onload=null;this.rel='stylesheet'">
+  <noscript><link href="https://fonts.googleapis.com/css2?family=Cinzel:wght@700;900&family=Noto+Sans+Hebrew:wght@300;400;600&display=swap" rel="stylesheet"></noscript>
   <title>One Piece ☠</title>
   <style>
     :root {
@@ -343,6 +346,7 @@
       grid-template-columns: repeat(auto-fill, minmax(170px, 1fr));
       gap: 16px;
       direction: rtl;
+      contain: layout style;
     }
 
     /* ── EPISODE CARD ─────────────────────────── */
@@ -352,12 +356,13 @@
       border-radius: 12px;
       cursor: pointer;
       outline: none;
-      transition: transform 0.22s cubic-bezier(0.34,1.3,0.64,1), box-shadow 0.22s ease, border-color 0.22s ease;
+      transition: transform 0.22s cubic-bezier(0.34,1.3,0.64,1), border-color 0.22s ease;
       position: relative;
       overflow: hidden;
       display: flex;
       flex-direction: column;
       box-shadow: 0 2px 12px rgba(0,0,0,0.5);
+      will-change: transform;
     }
 
     .epc::before {
@@ -371,14 +376,14 @@
 
     .epc:hover {
       transform: scale(1.04) translateY(-4px);
-      box-shadow: 0 12px 40px rgba(0,0,0,0.7), 0 0 0 1px rgba(200,148,14,0.35);
-      border-color: rgba(200,148,14,0.35);
+      box-shadow: 0 12px 32px rgba(0,0,0,0.7);
+      border-color: rgba(200,148,14,0.45);
       z-index: 3;
     }
 
     .epc:focus, .epc.fx {
       transform: scale(1.06) translateY(-4px);
-      box-shadow: 0 0 0 2px var(--gold2), 0 12px 40px rgba(0,0,0,0.8), 0 0 24px rgba(200,148,14,0.3);
+      box-shadow: 0 0 0 2px var(--gold2), 0 12px 32px rgba(0,0,0,0.8);
       border-color: var(--gold2);
       z-index: 5;
     }
@@ -411,8 +416,8 @@
 
     /* Currently watching */
     @keyframes borderPulse {
-      0%, 100% { box-shadow: 0 0 0 2px rgba(200,148,14,0.5), 0 8px 32px rgba(0,0,0,0.7) }
-      50%       { box-shadow: 0 0 0 2px rgba(240,192,48,0.9), 0 0 28px rgba(240,192,48,0.25), 0 8px 32px rgba(0,0,0,0.7) }
+      0%, 100% { border-color: rgba(200,148,14,0.6) }
+      50%       { border-color: rgba(240,192,48,1) }
     }
 
     .epc.has-resume {
@@ -687,7 +692,7 @@
     }
 
     .top-btn {
-      background: rgba(255,255,255,0.08);
+      background: rgba(6,8,14,0.82);
       border: 1px solid rgba(255,255,255,0.12);
       border-radius: 8px;
       color: var(--text);
@@ -699,8 +704,6 @@
       outline: none;
       white-space: nowrap;
       transition: all var(--tr);
-      backdrop-filter: blur(8px);
-      -webkit-backdrop-filter: blur(8px);
     }
 
     .top-btn:focus, .top-btn:hover {
@@ -747,11 +750,13 @@
       background: rgba(255,255,255,0.15);
       border-radius: 4px;
       cursor: pointer;
-      transition: height .15s;
+      transform-origin: bottom;
+      transition: transform .15s;
+      will-change: transform;
     }
 
     #prog-wrap:hover, #prog-wrap.fx {
-      height: 5px;
+      transform: scaleY(1.4);
     }
 
     #prog-buf {
@@ -905,7 +910,7 @@
       left: 50%;
       transform: translateX(-50%);
       z-index: 25;
-      background: rgba(6,10,20,0.95);
+      background: rgba(6,10,20,0.97);
       border: 1px solid rgba(200,148,14,0.4);
       border-radius: 14px;
       padding: 18px 28px;
@@ -917,8 +922,6 @@
       font-size: var(--fs-ui);
       min-width: 300px;
       text-align: center;
-      backdrop-filter: blur(12px);
-      -webkit-backdrop-filter: blur(12px);
     }
 
     #autonext.on {
@@ -1073,36 +1076,13 @@
       border-radius: 2px;
     }
 
-    /* ── CARD STAGGER ─────────────────────────── */
+    /* ── CARD ENTRANCE ────────────────────────── */
     @keyframes fadeInUp {
-      from { opacity: 0; transform: translateY(18px) }
+      from { opacity: 0; transform: translateY(12px) }
       to   { opacity: 1; transform: translateY(0) }
     }
 
-    .arc-grid .epc                { animation: fadeInUp 0.35s ease both }
-    .arc-grid .epc:nth-child(2)   { animation-delay: 0.04s }
-    .arc-grid .epc:nth-child(3)   { animation-delay: 0.08s }
-    .arc-grid .epc:nth-child(4)   { animation-delay: 0.12s }
-    .arc-grid .epc:nth-child(5)   { animation-delay: 0.16s }
-    .arc-grid .epc:nth-child(6)   { animation-delay: 0.20s }
-    .arc-grid .epc:nth-child(7)   { animation-delay: 0.24s }
-    .arc-grid .epc:nth-child(8)   { animation-delay: 0.28s }
-    .arc-grid .epc:nth-child(9)   { animation-delay: 0.32s }
-    .arc-grid .epc:nth-child(10)  { animation-delay: 0.36s }
-    .arc-grid .epc:nth-child(11)  { animation-delay: 0.40s }
-    .arc-grid .epc:nth-child(12)  { animation-delay: 0.44s }
-    .arc-grid .epc:nth-child(13)  { animation-delay: 0.48s }
-    .arc-grid .epc:nth-child(14)  { animation-delay: 0.52s }
-    .arc-grid .epc:nth-child(15)  { animation-delay: 0.56s }
-    .arc-grid .epc:nth-child(16)  { animation-delay: 0.60s }
-    .arc-grid .epc:nth-child(17)  { animation-delay: 0.64s }
-    .arc-grid .epc:nth-child(18)  { animation-delay: 0.68s }
-    .arc-grid .epc:nth-child(19)  { animation-delay: 0.72s }
-    .arc-grid .epc:nth-child(20)  { animation-delay: 0.76s }
-    .arc-grid .epc:nth-child(21)  { animation-delay: 0.80s }
-    .arc-grid .epc:nth-child(22)  { animation-delay: 0.84s }
-    .arc-grid .epc:nth-child(23)  { animation-delay: 0.88s }
-    .arc-grid .epc:nth-child(24)  { animation-delay: 0.92s }
+    .arc-grid .epc { animation: fadeInUp 0.25s ease both }
 
   </style>
 </head>
@@ -1375,6 +1355,7 @@
       WD_MS: 2 * 60 * 60 * 1000,
       seeking: false,
       saveIv: null,
+      _lastSec: -1,
     };
 
     /* ══════════════════════════════════════════════
@@ -1512,7 +1493,7 @@
       if (ST.focused) ST.focused.classList.remove('fx');
       ST.focused = el; if (!el) return;
       el.classList.add('fx'); el.focus({ preventScroll: false });
-      el.scrollIntoView({ block: 'nearest', inline: 'nearest', behavior: 'smooth' });
+      el.scrollIntoView({ block: 'nearest', inline: 'nearest' });
     }
     function nbr(cur, dir) {
       const all = [...document.querySelectorAll('#main-screen .focusable')];
@@ -1553,7 +1534,8 @@
       const el = e.target.closest('.focusable');
       if (el && MS.classList.contains('active')) activEl(el);
     }, true);
-    document.addEventListener('mousemove', resetAct);
+    let _rafMM = false;
+    document.addEventListener('mousemove', () => { if (_rafMM) return; _rafMM = true; requestAnimationFrame(() => { resetAct(); _rafMM = false; }); });
 
     function activEl(el) {
       const t = el.dataset.type;
@@ -1582,7 +1564,7 @@
       HUDT.textContent = ep.nm; HUDN.textContent = 'פרק ' + ep.n;
       VERR.classList.remove('on'); VLOAD.classList.add('on');
       LMSG.textContent = 'טוען וידאו...';
-      VID.src = ''; BPLAY.textContent = '▶'; resetProg();
+      VID.src = ''; BPLAY.textContent = '▶'; resetProg(); ST._lastSec = -1;
       clearInterval(ST.saveIv);
       if (!url) { showErr('פרק אינו זמין', 'הפרק לא נמצא במסד הנתונים'); return; }
       const saved = getPos(n);
@@ -1615,8 +1597,15 @@
     VID.addEventListener('timeupdate', () => {
       if (ST.seeking) return;
       const t = VID.currentTime, dur = VID.duration || 1, pct = (t / dur) * 100;
-      PROGFILL.style.width = pct + '%'; PROGTHUMB.style.left = pct + '%'; TCUR.textContent = fmt(t);
-      if (VID.buffered.length > 0) { const be = VID.buffered.end(VID.buffered.length - 1); PROGBUF.style.width = ((be / dur) * 100) + '%'; }
+      PROGFILL.style.width = pct + '%'; PROGTHUMB.style.left = pct + '%';
+      const sec = t | 0;
+      if (sec !== ST._lastSec) {
+        ST._lastSec = sec;
+        TCUR.textContent = fmt(t);
+        if (VID.buffered.length > 0) {
+          PROGBUF.style.width = ((VID.buffered.end(VID.buffered.length - 1) / dur) * 100) + '%';
+        }
+      }
     });
     VID.addEventListener('ended', () => {
       BPLAY.textContent = '▶'; clearInterval(ST.saveIv);
@@ -1670,7 +1659,8 @@
     function togHud() { if (ST.hudOn) { hideHud(); clearTimeout(ST.hudTimer); } else { showHud(); schedHud(); } }
     function showTop() { PTOP.classList.add('on'); clearTimeout(ST.topTimer); ST.topTimer = setTimeout(() => PTOP.classList.remove('on'), 3000); }
 
-    PS.addEventListener('mousemove', () => { resetAct(); showHud(); schedHud(); showTop(); });
+    let _rafPS = false;
+    PS.addEventListener('mousemove', () => { if (_rafPS) return; _rafPS = true; requestAnimationFrame(() => { resetAct(); showHud(); schedHud(); showTop(); _rafPS = false; }); });
     PHUD.addEventListener('mouseenter', () => { clearTimeout(ST.hudTimer); showHud(); });
     PHUD.addEventListener('mouseleave', schedHud);
     PTOP.addEventListener('mouseenter', e => { const b = e.target.closest('.top-btn'); if (b) b.focus(); }, true);
