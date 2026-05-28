@@ -798,6 +798,30 @@
       opacity: 1;
     }
 
+    /* Progress tooltip */
+    #prog-tip {
+      position: absolute;
+      bottom: calc(100% + 10px);
+      transform: translateX(-50%);
+      background: rgba(6,8,14,0.92);
+      border: 1px solid rgba(200,148,14,0.45);
+      border-radius: 6px;
+      color: var(--gold2);
+      font-size: 14px;
+      font-variant-numeric: tabular-nums;
+      font-family: var(--fu);
+      padding: 4px 10px;
+      white-space: nowrap;
+      pointer-events: none;
+      opacity: 0;
+      transition: opacity .12s;
+      z-index: 5;
+    }
+
+    #prog-wrap:hover #prog-tip {
+      opacity: 1;
+    }
+
     /* Controls row */
     .ctrl-row {
       display: flex;
@@ -1163,6 +1187,7 @@
         <div id="prog-buf"></div>
         <div id="prog-fill"></div>
         <div id="prog-thumb"></div>
+        <div id="prog-tip">0:00</div>
       </div>
       <div class="ctrl-row">
         <div class="vol-wrap">
@@ -1368,7 +1393,7 @@
     const VID = $('vid'), VLOAD = $('vid-loading'), VERR = $('vid-error'), LMSG = $('lmsg');
     const PTOP = $('player-top'), PHUD = $('player-hud');
     const TOPTTL = $('top-title'), HUDT = $('hud-title'), HUDN = $('hud-num');
-    const PROGWRAP = $('prog-wrap'), PROGFILL = $('prog-fill'), PROGBUF = $('prog-buf'), PROGTHUMB = $('prog-thumb');
+    const PROGWRAP = $('prog-wrap'), PROGFILL = $('prog-fill'), PROGBUF = $('prog-buf'), PROGTHUMB = $('prog-thumb'), PROGTIP = $('prog-tip');
     const TCUR = $('time-cur'), TDUR = $('time-dur');
     const BPLAY = $('btn-play'), BRW = $('btn-rw'), BFW = $('btn-fw');
     const BSPD = $('btn-spd'), BVOL = $('vol-slider'), VICO = $('vol-icon');
@@ -1647,6 +1672,13 @@
         e.preventDefault();
         VID.currentTime = Math.max(0, Math.min(VID.duration || 0, VID.currentTime + (e.key === 'ArrowLeft' ? step : -step)));
       }
+    });
+    PROGWRAP.addEventListener('mousemove', e => {
+      const rect = PROGWRAP.getBoundingClientRect();
+      const pct = Math.max(0, Math.min(1, (e.clientX - rect.left) / rect.width));
+      const dur = VID.duration || 0;
+      PROGTIP.textContent = fmt(pct * dur);
+      PROGTIP.style.left = (pct * 100) + '%';
     });
     function resetProg() { PROGFILL.style.width = '0%'; PROGBUF.style.width = '0%'; PROGTHUMB.style.left = '0%'; TCUR.textContent = '0:00'; TDUR.textContent = '0:00'; }
 
